@@ -1,0 +1,25 @@
+name: CytrilClan
+version: '${project.version}'
+main: com.cytril.cytrilclan.CytrilClan
+api-version: '1.21'
+author: CytrilClan Team
+description: Production-ready clan plugin with GUI banking, bases and member management.
+
+softdepend: [LuckPerms, PlaceholderAPI, floodgate]
+
+commands:
+  clan:
+    description: Main CytrilClan command.
+    usage: /clan <create|invite|join|leave|kick|disband|base|bank|settings|info|list|promote|demote|transfer|give|help>
+    aliases: [c, cclan]
+
+permissions:
+  cytrilclan.create:
+    description: Allows creating a clan.
+    default: op
+  cytrilclan.admin:
+    description: Allows admin override of clan commands.
+    default: op
+  cytrilclan.use:
+    description: Allows using basic clan commands.
+    default: true

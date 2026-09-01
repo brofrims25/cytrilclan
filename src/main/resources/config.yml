@@ -1,0 +1,45 @@
+# CytrilClan configuration
+
+general:
+  max-bases: 3
+  bank-rows: 6
+  base-warmup-seconds: 5
+  leader-transfer-delay-minutes: 60
+  members-per-page: 45
+  bank-items-per-page: 45
+  history-entries-per-page: 45
+
+messages:
+  prefix: "&8[&bCytrilClan&8] &r"
+
+sounds:
+  gui-open: "UI_BUTTON_CLICK"
+  gui-click: "UI_BUTTON_CLICK"
+  success: "ENTITY_PLAYER_LEVELUP"
+  error: "ENTITY_VILLAGER_NO"
+  deposit: "ENTITY_ITEM_PICKUP"
+  withdraw: "ENTITY_ITEM_PICKUP"
+  teleport: "ENTITY_ENDERMAN_TELEPORT"
+  kick: "ENTITY_IRON_GOLEM_HURT"
+
+profanity:
+  enabled: true
+  words:
+    - "badword1"
+    - "badword2"
+  regex-patterns:
+    - "(?i)f+u+c+k+"
+    - "(?i)n+i+g+g+"
+
+gui:
+  titles:
+    main-menu: "&8Clan Menu"
+    bank: "&8Clan Bank"
+    bank-deposit: "&8Deposit Items"
+    bank-withdraw: "&8Withdraw Items"
+    bank-history: "&8Transaction History"
+    settings: "&8Clan Settings"
+    members: "&8Clan Members"
+    member-manage: "&8Manage Member"
+    give-item: "&8Give Item"
+    bases: "&8Clan Bases"
