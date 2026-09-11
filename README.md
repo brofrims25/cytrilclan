@@ -3,6 +3,50 @@
 A production-ready clan plugin for Paper/Spigot **1.21.x**, built for servers
 running both Java and Bedrock players (via Geyser/Floodgate).
 
+## v1.1 changelog (review & hardening pass)
+
+- **Fixed: item loss via drag-and-drop.** Every read-only GUI (bank withdraw,
+  bank history, member list, etc.) now blocks `InventoryDragEvent` outside the
+  few slots that are meant to be editable (the deposit area, the give-item
+  slot). Previously a player could drag an item into an unused display slot
+  and lose it permanently when the menu closed.
+- **Fixed: renaming a clan left an orphaned YAML file.** `ClanManager` now has
+  a proper `renameClan()` that re-keys the in-memory index, saves under the
+  new filename, and deletes the old one.
+- **Fixed: clan/tag names had no character whitelist.** Since the clan name is
+  used directly as the save filename, names are now restricted to
+  `[A-Za-z0-9_]` (3-16 chars) and tags to `[A-Za-z0-9]` (2-5 chars) - both in
+  `/clan create` and in the in-game rename flow. Base names allow spaces/`-`/`_`
+  since they're never used as filenames.
+- **Fixed: self-management edge case.** A player could open their own entry in
+  the member list and act on themselves without outranking anyone. Management
+  actions now always require outranking the target, no exceptions.
+- **Added: disband confirmation.** Disbanding is permanent, so it's no longer
+  a single click - the GUI opens a "are you sure?" screen, and the command
+  requires `/clan disband confirm`.
+- **Added: invite expiry.** Invites now expire after
+  `general.invite-expiry-minutes` (default 5) instead of staying valid forever.
+- **Added: working `/clan transfer <player>` / `/clan transfer cancel`
+  command** (previously the command just told you to use the GUI).
+- **Added: `cytrilclan.use` permission is now actually enforced** at the top
+  of `/clan` (it existed in `plugin.yml` before but nothing checked it).
+- **Added: GUI open/click sound feedback** using the existing `gui-open` /
+  `gui-click` config entries, which were defined but never played.
+- **Added: `/clan kick <player> [reason]`** now accepts a plain-text reason
+  and blocks kicking the leader (already true in the GUI, now true in the
+  command too).
+- **Added: color + bold/regular picker for clan name/tag** (see Settings >
+  Rename Clan) - 14 dye-matched colors using only the 16 legacy Minecraft
+  color codes, so it renders identically on Java and Bedrock.
+
+**Testing note:** this environment has no network access to download the
+Paper/LuckPerms/PlaceholderAPI/Floodgate jars or run a live Minecraft server,
+so this pass was a thorough manual code review (brace/reference/type
+consistency, event-flow tracing, and reasoning through every click path) plus
+the fixes above - not an actual in-game playtest. Please test on a real
+1.21.x server after the GitHub Actions build succeeds, and report anything
+that doesn't behave as expected.
+
 ## Features
 
 - **Clan lifecycle** - create, invite, join, leave, kick, disband
@@ -10,7 +54,10 @@ running both Java and Bedrock players (via Geyser/Floodgate).
 - **Bank GUI** - free-form deposit area, paginated withdraw with a per-item
   confirm screen, and a paginated IN/OUT transaction history
 - **Settings GUI** - banner editing (hold a banner, click to apply), clan
-  rename via chat capture, base rename via chat capture
+  rename via a color + bold/regular picker (14 dye-matched colors using only
+  legacy Minecraft color codes, so it renders correctly on Java and on
+  Bedrock via Geyser/Floodgate) followed by chat text capture, and base
+  rename via chat capture
 - **Member management** - stats (kills/deaths), kick (instant or with a
   written-book reason via shift-click), promote/demote, and a **1-hour
   delayed leader transfer** that can be cancelled by clicking again before
@@ -90,6 +137,12 @@ Aliases: `/c`, `/cclan`.
 - **Bank storage size**: the shared bank uses a fixed 54-slot backing array
   regardless of `general.bank-rows` in `config.yml`; that setting is reserved
   for a future GUI-size option and isn't wired up to the storage size yet.
+- **Orange vs Gold**: vanilla Minecraft chat only has 16 fixed color codes,
+  and there's no separate "orange" among them - both the "Orange" and "Emas"
+  (Gold) options in the name-color picker use the same underlying color
+  (`&6`, Gold) as a result. Every other option (Merah, Pink, Putih, Hitam,
+  Ungu, Cyan, Biru, Biru Tua, Hijau, Abu-abu, Hijau Tua, Kuning) maps to a
+  visually distinct color.
 
 ## Building
 
@@ -110,7 +163,7 @@ To build locally instead (if you have internet access):
 mvn clean package
 ```
 
-The shaded jar will be at `target/CytrilClan-1.0.0.jar`.
+The shaded jar will be at `target/CytrilClan-1.1.0.jar`.
 
 ## Project layout
 
