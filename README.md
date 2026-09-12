@@ -3,6 +3,53 @@
 A production-ready clan plugin for Paper/Spigot **1.21.x**, built for servers
 running both Java and Bedrock players (via Geyser/Floodgate).
 
+## v1.2.0 changelog (join list, clan PVP toggle, placeholder fix)
+
+- **Fixed: `/clan join` had no way to see who invited you.** `/clan join`
+  with no arguments now lists every clan that currently has a pending invite
+  for you (name, tag, and the exact command to accept), and tab-completing
+  `/clan join <tab>` now suggests those same clan names instead of nothing.
+- **Changed: invite expiry is now 1 hour** (`general.invite-expiry-minutes: 60`
+  in config.yml, was 5) to match how long invites are meant to stay valid.
+  Only officers and the leader can invite - unchanged, already enforced.
+- **Added: `/clan pvp on|off`.** Every member can toggle whether their own
+  clanmates can hit them (and whether they can hit their clanmates). This is
+  strictly clan-internal: members of other clans and players with no clan at
+  all are never affected by anyone's setting, in either direction. Enforced
+  by a new damage listener that also resolves projectile shooters (arrows,
+  tridents, etc.), not just melee.
+- **Fixed: `%cytrilclan_tag%` showed an empty string for clanless players**
+  instead of "None" like `%cytrilclan_name%` did. Both now consistently
+  return "None" (colored and raw variants) when the player isn't in a clan.
+
+## v1.1.1 changelog (color/tab-list fix pass)
+
+- **Fixed: `%cytrilclan_name%` / `%cytrilclan_tag%` were plain/uncolored by
+  design** (a previous version deliberately kept them white so other plugins
+  sorting by name wouldn't break). This was the actual cause of clan names
+  showing up white in Tab/nametag plugins - they were almost certainly wired
+  to the plain placeholder instead of the colored one. **These two
+  placeholders are now colored by default** (the common expectation for a Tab
+  plugin config). Uncolored versions are still available as
+  `%cytrilclan_name_raw%` / `%cytrilclan_tag_raw%` for anything that sorts or
+  compares the value. `%cytrilclan_name_colored%` / `%cytrilclan_tag_colored%`
+  are kept working as aliases for anyone already using them.
+- **Fixed: Bold never actually rendered.** The bold code (`&l`) was being
+  placed *before* the color code (e.g. `&l&6ClanName`). In vanilla Minecraft
+  formatting, a color code resets any style codes that came before it, so
+  that string silently rendered as non-bold gold - the "Tebal (Bold)" toggle
+  in the name-style picker had no visible effect. Fixed the ordering to
+  color-then-style (`&6&lClanName`) in both the actual clan name/tag
+  formatting and the picker's live preview.
+
+If clan names still don't show color in your Tab plugin after this fix,
+double check: (1) your Tab plugin config uses `%cytrilclan_name%` (or
+`_colored`), not `%cytrilclan_name_raw%`; (2) run `/papi reload` after
+updating so PlaceholderAPI re-registers the expansion; (3) some Tab plugins
+have their own setting to enable/allow color codes coming from placeholder
+output (sometimes called "translate colors" or "parse placeholders") -
+check that plugin's own config if colors still don't show.
+
 ## v1.1 changelog (review & hardening pass)
 
 - **Fixed: item loss via drag-and-drop.** Every read-only GUI (bank withdraw,
@@ -64,13 +111,18 @@ that doesn't behave as expected.
   it completes
 - **Give-item GUI** - place an item, then pick an online clan member to
   receive it
+- **Per-player clan PVP toggle** - `/clan pvp on|off` controls whether *your*
+  clanmates can hit you (and you them). Never affects other clans or
+  clanless players either way.
 - **Integrations**
   - **LuckPerms** - clan creation permission (`cytrilclan.create`) is checked
     through the native LuckPerms API (not `Player#hasPermission`) for
     accurate results with negated/contextual nodes, falling back to Bukkit's
     check if LuckPerms isn't installed
-  - **PlaceholderAPI** - `%cytrilclan_name%`, `%cytrilclan_tag%`,
-    `%cytrilclan_role%`, `%cytrilclan_members%`
+  - **PlaceholderAPI** - `%cytrilclan_name%` / `%cytrilclan_tag%` (colored,
+    use these in Tab-list configs), `%cytrilclan_name_raw%` /
+    `%cytrilclan_tag_raw%` (plain, for sorting), `%cytrilclan_role%`,
+    `%cytrilclan_members%`
   - **Floodgate** - soft-depend, `FloodgateHook#isBedrockPlayer` available for
     future Bedrock-specific UX tweaks
 - **Storage** - one flat YAML file per clan under
@@ -98,7 +150,7 @@ the code comments in `BankDepositGui` and `GiveItemGui`.)
 /clan                          - open the clan menu
 /clan create <name> <tag>      - create a clan
 /clan invite <player>          - invite a player (officer/leader only)
-/clan join <name>               - accept a pending invite
+/clan join [name]               - list your pending invites, or accept one
 /clan leave                     - leave your clan
 /clan kick <player>              - kick a member
 /clan disband                   - disband your clan (leader only)
@@ -109,6 +161,7 @@ the code comments in `BankDepositGui` and `GiveItemGui`.)
 /clan list                      - list all clans
 /clan promote|demote <player>    - change a member's rank
 /clan give                      - give an item to a member
+/clan pvp on|off                 - toggle being hittable by your own clanmates
 /clan help                      - list commands
 ```
 
@@ -163,7 +216,7 @@ To build locally instead (if you have internet access):
 mvn clean package
 ```
 
-The shaded jar will be at `target/CytrilClan-1.1.0.jar`.
+The shaded jar will be at `target/CytrilClan-1.2.0.jar`.
 
 ## Project layout
 
