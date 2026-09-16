@@ -1,0 +1,102 @@
+# CytrilClan configuration
+# Default values are fine for most servers. Restart after editing this file.
+
+general:
+  max-bases: 3
+  bank-rows: 6
+  base-warmup-seconds: 5
+  leader-transfer-delay-minutes: 60
+  members-per-page: 45
+  bank-items-per-page: 45
+  history-entries-per-page: 45
+  invite-expiry-minutes: 60
+
+# Server-wide limits. Set to 0 to disable a limit.
+limits:
+  max-clans: 0
+  max-members-per-clan: 0
+
+# Turn individual pieces of the plugin on/off without removing the jar.
+# Disabled features are hidden from the main menu and their /clan
+# subcommands reply that the feature is disabled.
+features:
+  bank: true
+  bases: true
+  give-item: true
+  name-style-picker: true
+  pvp-toggle: true
+  chat-tag: true
+  economy: false   # requires Vault + an economy plugin (EssentialsX, CMI, etc.)
+
+# Only used when features.economy is true and Vault + an economy plugin are installed.
+economy:
+  clan-creation-cost: 0.0
+  refund-on-disband: false
+  refund-percent: 50
+
+# {tag} = the clan's colored tag (blank if the player has no clan)
+# {player} = the player's display name
+# {message} = the chat message
+# Requires features.chat-tag: true.
+chat:
+  format-with-clan: "&8[{tag}&8]&r {player}&7: &f{message}"
+  format-without-clan: "{player}&7: &f{message}"
+
+pvp:
+  notify-cooldown-seconds: 2
+
+messages:
+  prefix: "&8[&bCytrilClan&8] &r"
+
+sounds:
+  gui-open: "UI_BUTTON_CLICK"
+  gui-click: "UI_BUTTON_CLICK"
+  success: "ENTITY_PLAYER_LEVELUP"
+  error: "ENTITY_VILLAGER_NO"
+  deposit: "ENTITY_ITEM_PICKUP"
+  withdraw: "ENTITY_ITEM_PICKUP"
+  teleport: "ENTITY_ENDERMAN_TELEPORT"
+  kick: "ENTITY_IRON_GOLEM_HURT"
+
+# Applies to clan names, clan tags, and base names.
+profanity:
+  enabled: true
+  # "reject" - block the name/tag/base entirely and ask the player to try again (default, safest)
+  # "censor" - reserved for future use on free-text fields like kick-reason books;
+  #            names/tags/bases always use "reject" regardless of this setting,
+  #            since a partially-censored name would be a broken name/filename.
+  mode: "reject"
+  words:
+    - "anjing"
+    - "kontol"
+    - "memek"
+    - "bangsat"
+    - "asu"
+    - "goblok"
+    - "tolol"
+    - "babi"
+    - "fuck"
+    - "shit"
+    - "bitch"
+    - "asshole"
+    - "bastard"
+    - "nigger"
+    - "nigga"
+  regex-patterns:
+    - "(?i)f+u+c+k+"
+    - "(?i)n+i+g+g+"
+    - "(?i)k+o+n+t+o+l+"
+    - "(?i)m+e+m+e+k+"
+
+gui:
+  titles:
+    main-menu: "&8Clan Menu"
+    bank: "&8Clan Bank"
+    bank-deposit: "&8Deposit Items"
+    bank-withdraw: "&8Withdraw Items"
+    bank-history: "&8Transaction History"
+    settings: "&8Clan Settings"
+    members: "&8Clan Members"
+    member-manage: "&8Manage Member"
+    give-item: "&8Give Item"
+    bases: "&8Clan Bases"
