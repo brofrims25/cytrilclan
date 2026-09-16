@@ -3,6 +3,38 @@
 A production-ready clan plugin for Paper/Spigot **1.21.x**, built for servers
 running both Java and Bedrock players (via Geyser/Floodgate).
 
+## v1.3.0 changelog (config overhaul + new features)
+
+- **Added: much more configurable `config.yml`.**
+  - `features.*` - turn bank, bases, give-item, the name-color picker, the
+    PVP toggle, chat-tag injection, or the economy hooks on/off individually.
+    Disabled features are hidden from the main menu and their `/clan`
+    subcommands reply that the feature is off, instead of just not existing.
+  - `limits.max-clans` / `limits.max-members-per-clan` - server-wide caps
+    (0 = unlimited).
+  - `chat.format-with-clan` / `chat.format-without-clan` - see the new
+    chat-tag feature below.
+  - `pvp.notify-cooldown-seconds` - how often the "you can't hit them"
+    message can repeat (was hardcoded to 2 seconds before).
+  - `economy.*` - clan creation cost and disband refund, see below.
+  - `profanity.words` / `profanity.regex-patterns` now ship with a real
+    default list (common Indonesian and English profanity) instead of the
+    placeholder `badword1`/`badword2` example from earlier versions - add or
+    remove words freely, this only affects clan names, tags, and base names.
+- **Added: clan tag now shows in normal chat.** Controlled by
+  `features.chat-tag` and the `chat.format-*` templates in config.yml
+  (`{tag}`, `{player}`, `{message}` placeholders). Off by default behavior
+  is unaffected if you don't want it - just set `features.chat-tag: false`.
+- **Added: optional Vault economy integration.** With `features.economy: true`
+  and Vault + any economy plugin (EssentialsX, CMI, etc.) installed, clan
+  creation can cost money (`economy.clan-creation-cost`), with an optional
+  partial refund on disband (`economy.refund-on-disband` /
+  `economy.refund-percent`). With no economy plugin installed, or
+  `features.economy: false`, clan creation stays free - this is fully opt-in.
+- **Added: server-wide clan/member limits** via `limits.max-clans` and
+  `limits.max-members-per-clan`, enforced on `/clan create` and
+  `/clan invite` / `/clan join`.
+
 ## v1.2.0 changelog (join list, clan PVP toggle, placeholder fix)
 
 - **Fixed: `/clan join` had no way to see who invited you.** `/clan join`
@@ -125,6 +157,11 @@ that doesn't behave as expected.
     `%cytrilclan_members%`
   - **Floodgate** - soft-depend, `FloodgateHook#isBedrockPlayer` available for
     future Bedrock-specific UX tweaks
+  - **Vault** - soft-depend, optional clan-creation cost / disband refund via
+    any economy plugin. Fully opt-in via `features.economy` in config.yml;
+    with it off (default), the plugin never touches Vault at all.
+- **Chat tag injection** - clan tag (colored) prepended to normal chat,
+  configurable format, can be turned off entirely (`features.chat-tag`)
 - **Storage** - one flat YAML file per clan under
   `plugins/CytrilClan/clans/<name>.yml`; `ClanManager` keeps everything in
   memory for fast lookups and only touches disk on save
@@ -216,7 +253,7 @@ To build locally instead (if you have internet access):
 mvn clean package
 ```
 
-The shaded jar will be at `target/CytrilClan-1.2.0.jar`.
+The shaded jar will be at `target/CytrilClan-1.3.0.jar`.
 
 ## Project layout
 
