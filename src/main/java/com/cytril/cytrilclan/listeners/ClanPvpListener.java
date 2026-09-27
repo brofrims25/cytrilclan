@@ -10,6 +10,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.projectiles.ProjectileSource;
 
 import java.util.HashMap;
@@ -61,6 +62,41 @@ public class ClanPvpListener implements Listener {
         if (!victimAllows || !attackerAllows) {
             event.setCancelled(true);
             notify(attacker, victim);
+        }
+    }
+
+    /**
+     * BUGFIX: ClanMember has getKills()/getDeaths() (and even addKill()/addDeath()
+     * helpers already sitting there unused) and MemberListGui displays them in
+     * every member's lore - but nothing anywhere ever called those methods, so
+     * the "Kills:" / "Deaths:" lines in the member list were permanently frozen
+     * at whatever value happened to be in the save file (usually 0 forever).
+     * This listener is what was missing to make that display actually live.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onDeath(PlayerDeathEvent event) {
+        Player victim = event.getEntity();
+        Clan victimClan = plugin.getClanManager().getClanByPlayer(victim.getUniqueId());
+        if (victimClan != null) {
+            ClanMember victimMember = victimClan.getMember(victim.getUniqueId());
+            if (victimMember != null) {
+                victimMember.addDeath();
+                plugin.getClanManager().save(victimClan);
+            }
+        }
+
+        Player killer = victim.getKiller();
+        if (killer == null || killer.equals(victim)) {
+            return;
+        }
+        Clan killerClan = plugin.getClanManager().getClanByPlayer(killer.getUniqueId());
+        if (killerClan == null) {
+            return;
+        }
+        ClanMember killerMember = killerClan.getMember(killer.getUniqueId());
+        if (killerMember != null) {
+            killerMember.addKill();
+            plugin.getClanManager().save(killerClan);
         }
     }
 

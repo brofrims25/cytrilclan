@@ -10,6 +10,11 @@ general:
   bank-items-per-page: 45
   history-entries-per-page: 45
   invite-expiry-minutes: 60
+  # How long (seconds) a "waiting for chat/book input" action (rename clan,
+  # rename base, kick-reason book) stays active before it's auto-cancelled.
+  # Without this, abandoning one of those flows used to swallow every chat
+  # message the player sent afterwards forever - see BUGFIX-REPORT.md.
+  pending-action-timeout-seconds: 120
 
 # Server-wide limits. Set to 0 to disable a limit.
 limits:

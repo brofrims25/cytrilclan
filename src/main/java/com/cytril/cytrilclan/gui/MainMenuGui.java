@@ -50,7 +50,7 @@ public final class MainMenuGui {
         if (config.isBasesEnabled()) {
             inv.setItem(14, new ItemBuilder(Material.MAP)
                     .name("&aBases")
-                    .lore("&7Teleport to or manage bases.", "&7" + clan.getBases().size() + "/3 base(s)")
+                    .lore("&7Teleport to or manage bases.", "&7" + clan.getBases().size() + "/" + config.getMaxBases() + " base(s)")
                     .build());
         } else {
             inv.setItem(14, disabledButton());

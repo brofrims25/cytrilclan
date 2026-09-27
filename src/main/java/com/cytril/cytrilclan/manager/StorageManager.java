@@ -5,6 +5,7 @@ import com.cytril.cytrilclan.model.Clan;
 import com.cytril.cytrilclan.model.ClanBase;
 import com.cytril.cytrilclan.model.ClanMember;
 import com.cytril.cytrilclan.model.ClanRole;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
@@ -25,6 +26,18 @@ import java.util.logging.Level;
 /**
  * Persists each Clan as a single flat-file YAML document under
  * plugins/CytrilClan/clans/<name>.yml
+ *
+ * BUGFIX: save(Clan) used to build the YAML AND write it to disk fully
+ * synchronously, and every routine action in the plugin (deposit, withdraw,
+ * kick, promote, rename, join, leave, disband...) called it directly on the
+ * main thread. Disk writes don't have a predictable upper bound on how long
+ * they take (slow disks, network storage, OS buffering hiccups...), so this
+ * could cause visible lag spikes on busy servers. Building the YAML from the
+ * live Clan object must stay synchronous (it's fast, and touching Clan's
+ * mutable fields off the main thread would be unsafe) but the actual disk
+ * write doesn't need to be - saveAsync() splits the two and runs the write
+ * on an async task. save() remains fully synchronous and is now only used
+ * where completion truly must be guaranteed before moving on (onDisable()).
  */
 public class StorageManager {
 
@@ -72,6 +85,14 @@ public class StorageManager {
         clan.setBannerData(yml.getString("banner-data"));
         clan.setNameColorCode(yml.getString("name-color", "&f"));
         clan.setNameBold(yml.getBoolean("name-bold", false));
+
+        // Preserve whatever bank size this clan was saved with (don't force it to
+        // the current config default - that would resize/scramble existing banks).
+        String bankB64Peek = yml.getString("bank-contents");
+        if (bankB64Peek == null || bankB64Peek.isEmpty()) {
+            int rows = Math.max(1, Math.min(6, yml.getInt("bank-rows", 6)));
+            clan.setBankContents(new ItemStack[rows * 9]);
+        }
 
         if (yml.isConfigurationSection("members")) {
             for (String uuidStr : yml.getConfigurationSection("members").getKeys(false)) {
@@ -126,8 +147,38 @@ public class StorageManager {
         return clan;
     }
 
+    /**
+     * Fire-and-forget save used by every in-game action. Builds the YAML
+     * snapshot on the calling thread (fast, safe to touch the live Clan
+     * object), then writes it to disk on an async task so a slow disk can't
+     * stall the main thread.
+     */
+    public void saveAsync(Clan clan) {
+        File file = new File(clansFolder, clan.getName().toLowerCase() + ".yml");
+        YamlConfiguration yml = buildYaml(clan);
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> writeToDisk(file, yml, clan.getName()));
+    }
+
+    /**
+     * Fully synchronous save. Only used where completion truly must be
+     * guaranteed before moving on (onDisable()) - everywhere else use
+     * saveAsync().
+     */
     public void save(Clan clan) {
         File file = new File(clansFolder, clan.getName().toLowerCase() + ".yml");
+        YamlConfiguration yml = buildYaml(clan);
+        writeToDisk(file, yml, clan.getName());
+    }
+
+    private void writeToDisk(File file, YamlConfiguration yml, String clanName) {
+        try {
+            yml.save(file);
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to save clan " + clanName, e);
+        }
+    }
+
+    private YamlConfiguration buildYaml(Clan clan) {
         YamlConfiguration yml = new YamlConfiguration();
 
         yml.set("name", clan.getName());
@@ -137,6 +188,7 @@ public class StorageManager {
         yml.set("banner-data", clan.getBannerData());
         yml.set("name-color", clan.getNameColorCode());
         yml.set("name-bold", clan.isNameBold());
+        yml.set("bank-rows", clan.getBankContents().length / 9);
 
         for (ClanMember member : clan.getMembers().values()) {
             String path = "members." + member.getUuid() + ".";
@@ -178,11 +230,7 @@ public class StorageManager {
             t++;
         }
 
-        try {
-            yml.save(file);
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to save clan " + clan.getName(), e);
-        }
+        return yml;
     }
 
     public void delete(Clan clan) {

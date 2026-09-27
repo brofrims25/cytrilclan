@@ -19,20 +19,26 @@ import java.util.UUID;
 public class LeaderTransferTask extends BukkitRunnable {
 
     private final CytrilClan plugin;
-    private final String clanName;
+    private final Clan clan;
     private final UUID newLeaderUuid;
 
     public LeaderTransferTask(CytrilClan plugin, Clan clan, UUID newLeaderUuid) {
         this.plugin = plugin;
-        this.clanName = clan.getName();
+        // BUGFIX: this used to store clan.getName() and look the clan back up by
+        // that name when the task fired. If the leader renamed the clan while the
+        // transfer was pending, the lookup by the now-stale old name returned null
+        // and the transfer silently never happened - no message to anyone, and
+        // ClanManager kept reporting a "pending transfer" that would never run.
+        // Holding the Clan object itself sidesteps that: its identity doesn't
+        // change on rename, only its name field does.
+        this.clan = clan;
         this.newLeaderUuid = newLeaderUuid;
     }
 
     @Override
     public void run() {
-        Clan clan = plugin.getClanManager().getClanByName(clanName);
-        if (clan == null) {
-            return;
+        if (plugin.getClanManager().getClanByName(clan.getName()) != clan) {
+            return; // clan was disbanded (or replaced) since this was scheduled
         }
         ClanMember newLeaderMember = clan.getMember(newLeaderUuid);
         if (newLeaderMember == null) {

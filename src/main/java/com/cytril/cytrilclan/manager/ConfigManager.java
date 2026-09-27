@@ -58,6 +58,13 @@ public class ConfigManager {
         return config.getInt("general.invite-expiry-minutes", 60);
     }
 
+    // BUGFIX: backs PendingActionManager's timeout so a pending rename/kick-book
+    // action can't hijack a player's chat forever (add this key under "general:"
+    // in config.yml - see BUGFIX-REPORT.md).
+    public int getPendingActionTimeoutSeconds() {
+        return config.getInt("general.pending-action-timeout-seconds", 120);
+    }
+
     // --- limits ---
 
     public int getMaxClans() {

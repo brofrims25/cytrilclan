@@ -5,6 +5,7 @@ import com.cytril.cytrilclan.model.ClanMember;
 import com.cytril.cytrilclan.model.ClanRole;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
@@ -23,12 +24,14 @@ import java.util.UUID;
 public class ClanManager {
 
     private final StorageManager storageManager;
+    private final ConfigManager configManager;
     private final Map<String, Clan> clansByName = new LinkedHashMap<>(); // key = lowercase name
     private final Map<UUID, String> playerClanIndex = new HashMap<>();
     private final Map<String, BukkitTask> pendingLeaderTransfers = new HashMap<>();
 
-    public ClanManager(StorageManager storageManager) {
+    public ClanManager(StorageManager storageManager, ConfigManager configManager) {
         this.storageManager = storageManager;
+        this.configManager = configManager;
     }
 
     public void loadAll() {
@@ -42,6 +45,7 @@ public class ClanManager {
         }
     }
 
+    /** Used on plugin disable - stays fully synchronous on purpose. */
     public void saveAll() {
         for (Clan clan : clansByName.values()) {
             storageManager.save(clan);
@@ -50,11 +54,17 @@ public class ClanManager {
 
     public Clan createClan(String name, String tag, Player leader) {
         Clan clan = new Clan(name, tag, leader.getUniqueId(), System.currentTimeMillis());
+        // BUGFIX: general.bank-rows was documented in config.yml but nothing ever
+        // read it - every clan's bank was hardcoded to 54 slots regardless of what
+        // an admin set. New clans now actually get a bank sized from that setting.
+        int rows = configManager != null ? configManager.getBankRows() : 6;
+        rows = Math.max(1, Math.min(6, rows));
+        clan.setBankContents(new ItemStack[rows * 9]);
         ClanMember leaderMember = new ClanMember(leader.getUniqueId(), leader.getName(), ClanRole.LEADER, System.currentTimeMillis());
         clan.getMembers().put(leader.getUniqueId(), leaderMember);
         clansByName.put(name.toLowerCase(), clan);
         playerClanIndex.put(leader.getUniqueId(), name.toLowerCase());
-        storageManager.save(clan);
+        storageManager.saveAsync(clan);
         return clan;
     }
 
@@ -71,17 +81,18 @@ public class ClanManager {
         ClanMember member = new ClanMember(player.getUniqueId(), player.getName(), role, System.currentTimeMillis());
         clan.getMembers().put(player.getUniqueId(), member);
         playerClanIndex.put(player.getUniqueId(), clan.getName().toLowerCase());
-        storageManager.save(clan);
+        storageManager.saveAsync(clan);
     }
 
     public void removeMember(Clan clan, UUID uuid) {
         clan.getMembers().remove(uuid);
         playerClanIndex.remove(uuid);
-        storageManager.save(clan);
+        storageManager.saveAsync(clan);
     }
 
+    /** Routine save used by every in-game action - non-blocking (see StorageManager). */
     public void save(Clan clan) {
-        storageManager.save(clan);
+        storageManager.saveAsync(clan);
     }
 
     /**
@@ -91,14 +102,27 @@ public class ClanManager {
      */
     public void renameClan(Clan clan, String newName) {
         String oldNameKey = clan.getName().toLowerCase();
+        String newNameKey = newName.toLowerCase();
         clan.setName(newName);
         clansByName.remove(oldNameKey);
-        clansByName.put(newName.toLowerCase(), clan);
+        clansByName.put(newNameKey, clan);
         for (UUID uuid : clan.getMembers().keySet()) {
-            playerClanIndex.put(uuid, newName.toLowerCase());
+            playerClanIndex.put(uuid, newNameKey);
         }
-        storageManager.save(clan);
-        if (!oldNameKey.equals(newName.toLowerCase())) {
+        // BUGFIX: pendingLeaderTransfers was keyed by name and never re-keyed here.
+        // Renaming a clan while a /clan transfer was pending left the entry
+        // orphaned under the old name - hasPendingLeaderTransfer() on the new name
+        // would report "nothing pending" while the scheduled task (which also used
+        // to look the clan up by its old name - see LeaderTransferTask) silently
+        // failed to apply when it fired.
+        if (!oldNameKey.equals(newNameKey)) {
+            BukkitTask pendingTransfer = pendingLeaderTransfers.remove(oldNameKey);
+            if (pendingTransfer != null) {
+                pendingLeaderTransfers.put(newNameKey, pendingTransfer);
+            }
+        }
+        storageManager.saveAsync(clan);
+        if (!oldNameKey.equals(newNameKey)) {
             storageManager.deleteByName(oldNameKey);
         }
     }

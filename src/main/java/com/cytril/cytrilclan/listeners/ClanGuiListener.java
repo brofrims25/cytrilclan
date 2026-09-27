@@ -113,6 +113,14 @@ public class ClanGuiListener implements Listener {
             if (item != null && item.getType() != Material.AIR) {
                 returnOrDrop(player, item);
             }
+        } else if (holder.getType() == GuiType.GIVE_ITEM_TARGET) {
+            // BUGFIX: the item staged for "give item" lived only in holder.getContext()
+            // once the recipient-picker screen opened. Closing that screen (back button,
+            // ESC, the vanilla X) without picking a recipient used to delete it outright.
+            Object context = holder.getContext();
+            if (context instanceof ItemStack pending && pending.getType() != Material.AIR) {
+                returnOrDrop(player, pending);
+            }
         }
     }
 
@@ -460,7 +468,12 @@ public class ClanGuiListener implements Listener {
                 }
                 if (event.isShiftClick()) {
                     ItemStack book = new ItemStack(Material.WRITABLE_BOOK);
-                    player.getInventory().addItem(book);
+                    // BUGFIX: don't silently swallow the book if the leader's inventory
+                    // is full - drop it at their feet like everywhere else in this class.
+                    var leftoverBook = player.getInventory().addItem(book);
+                    for (ItemStack extra : leftoverBook.values()) {
+                        player.getWorld().dropItemNaturally(player.getLocation(), extra);
+                    }
                     plugin.getPendingActionManager().set(player.getUniqueId(), PendingActionManager.ActionType.KICK_REASON_BOOK, targetUuid);
                     player.closeInventory();
                     MessageUtil.send(player, "&eWrite a kick reason in the book, then sign or close it.");
@@ -558,6 +571,9 @@ public class ClanGuiListener implements Listener {
         }
         MessageUtil.sendSuccess(player, "Gave the item to " + target.getName() + ".");
         MessageUtil.sendSuccess(target, player.getName() + " gave you an item from the clan.");
+        // BUGFIX: clear the context BEFORE closing, so onClose() doesn't see a "pending"
+        // item anymore and hand out a second free copy of what we just gave away.
+        holder.setContext(null);
         player.closeInventory();
     }
 

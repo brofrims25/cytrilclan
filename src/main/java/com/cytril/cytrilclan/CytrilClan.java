@@ -44,10 +44,15 @@ public class CytrilClan extends JavaPlugin {
         MessageUtil.setPrefix(configManager.getPrefix());
 
         this.storageManager = new StorageManager(this);
-        this.clanManager = new ClanManager(storageManager);
+        // BUGFIX: ClanManager now needs ConfigManager so new clans get a bank sized
+        // from "general.bank-rows" instead of a hardcoded 54 slots.
+        this.clanManager = new ClanManager(storageManager, configManager);
         this.clanManager.loadAll();
 
-        this.pendingActionManager = new PendingActionManager();
+        // BUGFIX: pending rename/kick-book actions now expire on their own instead
+        // of hijacking chat forever. Timeout is configurable via
+        // "general.pending-action-timeout-seconds" (default 120s).
+        this.pendingActionManager = new PendingActionManager(configManager.getPendingActionTimeoutSeconds() * 1000L);
         this.profanityFilter = new ProfanityFilter(getConfig().getConfigurationSection("profanity"));
         this.soundUtil = new SoundUtil(getConfig().getConfigurationSection("sounds"));
 
