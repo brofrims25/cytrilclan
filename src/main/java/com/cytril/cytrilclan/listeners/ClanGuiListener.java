@@ -192,9 +192,27 @@ public class ClanGuiListener implements Listener {
 
     private void handleBankDeposit(InventoryClickEvent event, Player player, Clan clan, ClanGuiHolder holder) {
         int slot = event.getRawSlot();
+        int topSize = event.getView().getTopInventory().getSize();
+
         if (slot >= 0 && slot < BankDepositGui.DEPOSIT_AREA_SIZE) {
             return; // allow free item movement in the deposit area
         }
+        if (slot >= topSize) {
+            // BUGFIX: a click here means the player clicked in their OWN inventory
+            // (raw slot numbering puts the bottom/player inventory at topSize and
+            // up) - most commonly a shift-click to quickly deposit an item, or
+            // pressing Q to drop one. This used to fall through to
+            // event.setCancelled(true) below because it didn't match the deposit
+            // area (0-35) or any control-row slot number, which cancels the WHOLE
+            // action: a shift-clicked item would visually "snap back" instead of
+            // moving into the deposit area, and Q-drop would silently do nothing.
+            // None of that touches the top inventory's control row, so it's safe
+            // to just let vanilla handle it (shift-click naturally fills the first
+            // empty deposit slot; it won't overwrite the control buttons since
+            // those slots are already occupied by filler/button items).
+            return;
+        }
+
         event.setCancelled(true);
         if (slot == BankDepositGui.BACK_SLOT) {
             returnDepositedItems(event.getInventory(), player);
@@ -514,8 +532,17 @@ public class ClanGuiListener implements Listener {
 
     private void handleGiveItem(InventoryClickEvent event, Player player, Clan clan) {
         int slot = event.getRawSlot();
+        int topSize = event.getView().getTopInventory().getSize();
         if (slot == GiveItemGui.ITEM_SLOT) {
             return; // allow placing/removing the item to give
+        }
+        if (slot >= topSize) {
+            // BUGFIX: same class of bug as BankDepositGui - a click here is in the
+            // player's OWN inventory (shift-click to place the item, or a Q-drop).
+            // It used to be cancelled unconditionally, which snapped shift-clicked
+            // items back and blocked dropping. Safe to allow: it can't touch the
+            // single item slot's neighbours since there aren't any in this GUI.
+            return;
         }
         event.setCancelled(true);
         if (slot == GiveItemGui.CONFIRM_SLOT) {
